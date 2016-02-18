@@ -82,9 +82,7 @@ void setup() {
   
   pinMode(LED, OUTPUT);
 
-  
-  
-  SdInit();
+  SdInit(9600);
 }
 
 #define BUFSIZ 100  //Buffer size for getting data
@@ -218,8 +216,8 @@ void StartServer() {
   }
 }
 
-void SdInit() {
-  Serial.begin(256000);
+void SdInit(int baud) {
+  Serial.begin(baud);
   PgmPrint("Free RAM: ");
   Serial.println(FreeRam());
   pinMode(10, OUTPUT);
