@@ -18,9 +18,6 @@
 #include <SPI.h>
 #include <Ethernet.h>
 #include <Servo.h>
-#include <SdFat.h>
-#include <SdFatUtil.h>
-#include <SdVolume.h>
 
 char inData[11]; // Allocate some space for the string
 char inChar; // Where to store the character read
@@ -45,27 +42,6 @@ byte mac[] = {
 };
 IPAddress ip(192, 168, 1, 80);
 
-Sd2Card card;
-SdVolume volume;
-SdFile root;
-SdFile file;
-
-
-#define error(s) error_P(PSTR(s))
-void error_P(const char* str) {
-  PgmPrint("error: ");
-  SerialPrintln_P(str);
-  if (card.errorCode()) {
-    PgmPrint("SD error: ");
-    Serial.print(card.errorCode(), HEX);
-    Serial.print(',');
-    Serial.println(card.errorData(), HEX);
-  }
-  while(1);
-}
-
-char rootFileName[] = "index.htm";
-
 // Initialize the Ethernet server library
 // with the IP address and port you want to use
 // (port 80 is default for HTTP):
@@ -81,10 +57,8 @@ void setup() {
   servo.write(0);
   
   pinMode(LED, OUTPUT);
-
   
-  
-  SdInit();
+  StartServer();
 }
 
 #define BUFSIZ 100  //Buffer size for getting data
@@ -216,25 +190,4 @@ void StartServer() {
     Serial.print("Server now online at ");
     Serial.println(Ethernet.localIP());
   }
-}
-
-void SdInit() {
-  Serial.begin(256000);
-  PgmPrint("Free RAM: ");
-  Serial.println(FreeRam());
-  pinMode(10, OUTPUT);
-  digitalWrite(10, HIGH);
-  if (!card.init(SPI_FULL_SPEED, 4)) error("card.init failed!");
-  if (!volume.init(&card)) error("vol.init failed!");
-  PgmPrint("Volume is FAT");
-  Serial.println(volume.fatType(),DEC);
-  Serial.println();
-  if (!root.openRoot(&volume)) error("openRoot failed");
-  PgmPrintln("Files found in root:");
-  root.ls(LS_DATE | LS_SIZE);
-  Serial.println();
-  PgmPrintln("Files found in all dirs:");
-  root.ls(LS_R);
-  Serial.println();
-  PgmPrintln("Done");
 }
