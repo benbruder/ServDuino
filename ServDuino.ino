@@ -54,7 +54,9 @@ int LED = 15;
 
 void setup() {
   servo.attach(9);  //sets servo to pin 9.  Choose your favorite PWM pin (except 10 or 11)
-  servo.write(0);
+  servo.write(1);
+  
+  Serial.begin(9600);
   
   pinMode(LED, OUTPUT);
   
@@ -118,16 +120,28 @@ void loop() {
           blink(300, 3);
           gotInfo = true;
           infoType = 3;
-        } else if(strstr(clientline,"/?servo=")!=0 && !gotInfo && infoType != 4) {
-          char* where = strpbrk(clientline, "/?servo=");
-          Serial.print("String: ");
-          Serial.println(where);
-          Serial.println("\n");
+        } else if(strstr(clientline,"/?servo=s1")!=0 && !gotInfo && infoType != 4) {
+          //char* where = strpbrk(clientline, "/?servo=");
+          //Serial.print("String: ");
+          //Serial.println(where);
+          //Serial.println("\n");
           //Serial.print();
           //Serial.println(where);
+          sweep(15);
           gotInfo = true;
           infoType = 4;
           //char *gett = substr(where+)
+        } else if(strstr(clientline,"/?servo=s2")!=0 && !gotInfo && infoType != 5) {
+          sweep(13);
+          sweep(13);
+          gotInfo = true;
+          infoType = 5;
+        } else if(strstr(clientline,"/?servo=s3")!=0 && !gotInfo && infoType != 6) {
+          sweep(10);
+          sweep(10);
+          sweep(10);
+          gotInfo = true;
+          infoType = 6;
         }
       }
     }
@@ -155,12 +169,15 @@ void loop() {
   if(gotData) {
     gotData = false;
     charIndex = 0;
-    int servoValue = atoi(inData);
-    Serial.print("Servo Value: ");
-    Serial.print(servoValue);
-    servo.write(servoValue);
-    for (int i = 0; i <= 10; i++) inData[i] = 0;
-    servoValue = '\0';
+    if (inData[0] == 's') {sweep(10); sweep(10);} else {
+      int servoValue = atoi(inData);
+      Serial.print("Servo Value: ");
+      Serial.println(servoValue);
+      servoValue = constrain(servoValue, 1, 180);
+      servo.write(servoValue);
+      for (int i = 0; i <= 10; i++) inData[i] = 0;
+      servoValue = '\0';
+    }
   }
   
 }
@@ -190,4 +207,19 @@ void StartServer() {
     Serial.print("Server now online at ");
     Serial.println(Ethernet.localIP());
   }
+}
+
+void sweep(int tick) {
+  int pos;
+  for(pos = 0; pos <= 180; pos += 1) // goes from 0 degrees to 180 degrees 
+  {                                  // in steps of 1 degree 
+    servo.write(pos);              // tell servo to go to position in variable 'pos' 
+    delay(tick);                       // waits 15ms for the servo to reach the position 
+  } 
+  for(pos = 180; pos>=0; pos-=1)     // goes from 180 degrees to 0 degrees 
+  {                                
+    servo.write(pos);              // tell servo to go to position in variable 'pos' 
+    delay(tick);                       // waits 15ms for the servo to reach the position 
+  }
+  servo.write(1);
 }
