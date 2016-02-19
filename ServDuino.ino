@@ -87,11 +87,12 @@ void setup() {
 
 #define BUFSIZ 100  //Buffer size for getting data
 char clientline[BUFSIZ];  //string that will contain command data
-int index = 0;  //clientline index
+char *filename;
 
 void loop() {
-  index = 0; // reset the clientline index
+  int index = 0; // reset the clientline index
   // listen for incoming clients
+  int image = 0;
   EthernetClient client = server.available();
   if (client) {
     Serial.println("new client");
@@ -105,54 +106,63 @@ void loop() {
           clientline[index]=c;
           index++;
         }
-        if (c == '\n' && currentLineIsBlank)
-        {
+        clientline[index] = 0;
+        filename = 0;
+        Serial.print("Request: ");
+        Serial.println(clientline);
+        Serial.println("\n");
+        if (strstr(clientline, "GET / ") != 0) {
+          filename = rootFileName;
+        }
+        if (strstr(clientline, "GET /") != 0) {
+          if (!filename) filename = clientline + 5;
+          (strstr(clientline, " HTTP"))[0] = 0;
+          Serial.println(filename);
+          if (! file.open(&root, filename, O_READ)) {
+            client.println("HTTP/1.1 404 Not Found");
+            client.println("Content-Type: text/html");
+            client.println();
+            client.println("<h2>File Not Found!</h2>");
+            break;
+          }
+          Serial.println("Opened!");
           client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println("Connection: close");
+          if (strstr(filename, ".htm") != 0){
+            client.println("Content-Type: text/html");
+            servoangle+=MOV;  //Moves servo amount specified by MOV when html file is opened
+          }
+          else if (strstr(filename, ".css") != 0)
+            client.println("Content-Type: text/css");
+          else if (strstr(filename, ".png") != 0)
+            client.println("Content-Type: image/png");
+          else if (strstr(filename, ".jpg") != 0)
+            client.println("Content-Type: image/jpeg");
+          else if (strstr(filename, ".gif") != 0)
+            client.println("Content-Type: image/gif");
+          else if (strstr(filename, ".3gp") != 0)
+            client.println("Content-Type: video/mpeg");
+          else if (strstr(filename, ".pdf") != 0)
+            client.println("Content-Type: application/pdf");
+          else if (strstr(filename, ".js") != 0)
+            client.println("Content-Type: application/x-javascript");
+          else if (strstr(filename, ".xml") != 0)
+            client.println("Content-Type: application/xml");
+          else
+            client.println("Content-Type: text");
           client.println();
-          client.println("<!DOCTYPE html>");
-          client.println("<h1><center>LED Control</h1></center><br>");
-          client.println("<center><form method=get action=/?>");
-          client.println("<button type=submit name=led value=0>Off</button>");
-          client.println("<button type=submit name=led value=1>On</button>");
-          client.println("<button type=submit name=led value=2>Blink</button></form><br>");
-          client.println("<form method=get action=/?>");
-          client.println("<input type=text name=servo>");
-          client.println("<input type=submit>");
-          client.println("</form></center>");
-          break;
+          int16_t c;
+          while ((c = file.read()) >= 0) {
+              client.write((char)c);
+          }
+          file.close();
         }
-        if (c == '\n') {
-          currentLineIsBlank = true;
-          gotInfo = false;
-        } 
-        else if (c != '\r') {
-          currentLineIsBlank = false;
+        else {
+          client.println("HTTP/1.1 404 Not Found");
+          client.println("Content-Type: text/html");
+          client.println();
+          client.println("<h2>File Not Found!</h2>");
         }
-        if(strstr(clientline,"/?led=1")!=0 && !gotInfo && infoType != 1) {  //look for the command to turn the led on
-          digitalWrite(LED, HIGH);  //turn the led on
-          gotInfo = true;
-          infoType = 1;
-        } else if(strstr(clientline,"/?led=0")!=0 && !gotInfo && infoType != 2) {  //look for command to turn led off. Note: If led is on, it will stay on until command is given to turn it off, even if multiple computers are on the site
-          digitalWrite(LED, LOW);  //turn led off
-          gotInfo = true;
-          infoType = 2;
-        } else if(strstr(clientline,"/?led=2")!=0 && !gotInfo && infoType != 3) {
-          blink(300, 3);
-          gotInfo = true;
-          infoType = 3;
-        } else if(strstr(clientline,"/?servo=")!=0 && !gotInfo && infoType != 4) {
-          char* where = strpbrk(clientline, "/?servo=");
-          Serial.print("String: ");
-          Serial.println(where);
-          Serial.println("\n");
-          //Serial.print();
-          //Serial.println(where);
-          gotInfo = true;
-          infoType = 4;
-          //char *gett = substr(where+)
-        }
+        break;
       }
     }
     // give the web browser time to receive the data
